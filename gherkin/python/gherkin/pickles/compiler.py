@@ -24,14 +24,13 @@ def compile(gherkin_document):
 
 
 def _compile_scenario(feature_tags, background_steps, scenario, language, pickles):
-    if len(scenario['steps']) == 0:
-        return
-
-    steps = list(background_steps)
     tags = list(feature_tags) + list(scenario['tags'])
 
-    for step in scenario['steps']:
-        steps.append(_pickle_step(step))
+    steps = list()
+    if len(scenario['steps']) > 0:
+        steps.extend(background_steps)
+        for step in scenario['steps']:
+            steps.append(_pickle_step(step))
 
     pickle = {
         'tags': _pickle_tags(tags),
@@ -44,37 +43,36 @@ def _compile_scenario(feature_tags, background_steps, scenario, language, pickle
 
 
 def _compile_scenario_outline(feature_tags, background_steps, scenario_outline, language, pickles):
-    if len(scenario_outline['steps']) == 0:
-        return
-
     for examples in (e for e in scenario_outline['examples'] if 'tableHeader' in e):
         variable_cells = examples['tableHeader']['cells']
 
         for values in examples['tableBody']:
             value_cells = values['cells']
-            steps = list(background_steps)
             tags = list(feature_tags) \
                 + list(scenario_outline['tags']) \
                 + list(examples['tags'])
 
-            for scenario_outline_step in scenario_outline['steps']:
-                step_text = _interpolate(
-                    scenario_outline_step['text'],
-                    variable_cells,
-                    value_cells)
-                arguments = _create_pickle_arguments(
-                    scenario_outline_step.get('argument'),
-                    variable_cells,
-                    value_cells)
-                _pickle_step = {
-                    'text': step_text,
-                    'arguments': arguments,
-                    'locations': [
-                        _pickle_location(values['location']),
-                        _pickle_step_location(scenario_outline_step)
-                    ]
-                }
-                steps.append(_pickle_step)
+            steps = list()
+            if len(scenario_outline['steps']) > 0:
+                steps.extend(background_steps)
+                for scenario_outline_step in scenario_outline['steps']:
+                    step_text = _interpolate(
+                        scenario_outline_step['text'],
+                        variable_cells,
+                        value_cells)
+                    arguments = _create_pickle_arguments(
+                        scenario_outline_step.get('argument'),
+                        variable_cells,
+                        value_cells)
+                    _pickle_step = {
+                        'text': step_text,
+                        'arguments': arguments,
+                        'locations': [
+                            _pickle_location(values['location']),
+                            _pickle_step_location(scenario_outline_step)
+                        ]
+                    }
+                    steps.append(_pickle_step)
 
             pickle = {
                 'name': _interpolate(
