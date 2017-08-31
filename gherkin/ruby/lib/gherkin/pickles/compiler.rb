@@ -24,14 +24,14 @@ module Gherkin
     private
 
       def compile_scenario(feature_tags, background_steps, scenario, language, pickles)
-        return if scenario[:steps].empty?
-
-        steps = [].concat(background_steps)
-
         tags = [].concat(feature_tags).concat(scenario[:tags])
 
-        scenario[:steps].each do |step|
-          steps.push(pickle_step(step))
+        steps = []
+        unless scenario[:steps].empty?
+          steps.concat(background_steps)
+          scenario[:steps].each do |step|
+            steps.push(pickle_step(step))
+          end
         end
 
         pickle = {
@@ -45,27 +45,28 @@ module Gherkin
       end
 
       def compile_scenario_outline(feature_tags, background_steps, scenario_outline, language, pickles)
-        return if scenario_outline[:steps].empty?
-
         scenario_outline[:examples].reject { |examples| examples[:tableHeader].nil? }.each do |examples|
           variable_cells = examples[:tableHeader][:cells]
           examples[:tableBody].each do |values|
             value_cells = values[:cells]
-            steps = [].concat(background_steps)
             tags = [].concat(feature_tags).concat(scenario_outline[:tags]).concat(examples[:tags])
 
-            scenario_outline[:steps].each do |scenario_outline_step|
-              step_text = interpolate(scenario_outline_step[:text], variable_cells, value_cells);
-              arguments = create_pickle_arguments(scenario_outline_step[:argument], variable_cells, value_cells)
-              pickle_step = {
-                text: step_text,
-                arguments: arguments,
-                locations: [
-                  pickle_location(values[:location]),
-                  pickle_step_location(scenario_outline_step)
-                ]
-              }
-              steps.push(pickle_step)
+            steps = []
+            unless scenario_outline[:steps].empty?
+              steps.concat(background_steps)
+              scenario_outline[:steps].each do |scenario_outline_step|
+                step_text = interpolate(scenario_outline_step[:text], variable_cells, value_cells)
+                arguments = create_pickle_arguments(scenario_outline_step[:argument], variable_cells, value_cells)
+                pickle_step = {
+                  text: step_text,
+                  arguments: arguments,
+                  locations: [
+                    pickle_location(values[:location]),
+                    pickle_step_location(scenario_outline_step)
+                  ]
+                }
+                steps.push(pickle_step)
+              end
             end
 
             pickle = {
